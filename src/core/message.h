@@ -91,4 +91,7 @@ extern void nni_msg_set_proto_data(nng_msg *, nni_proto_msg_ops *, void *);
 // the message is set by it alone.
 extern void *nni_msg_get_proto_data(nng_msg *);
 
+extern int nni_msg_proto_set_dup(nni_msg *m, int (*dup)(void **, const void *));
+extern int nni_msg_proto_set_free(nni_msg *m, int (*free)(void *));
+
 #endif // CORE_SOCKET_H

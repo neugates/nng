@@ -522,6 +522,47 @@ test_msg_reserve(void)
 	nng_msg_free(msg);
 }
 
+static int
+extbuf_dup(void **destp, void *src)
+{
+	char *dest = nng_alloc(strlen(src) + 1);
+
+	strcpy(dest, src);
+
+	*destp = dest;
+	return (0);
+}
+
+static int
+extbuf_free(void *extbuf)
+{
+	nng_free(extbuf, strlen(extbuf) + 1);
+	return (0);
+}
+
+void
+test_extbuf()
+{
+	nng_msg *msg = NULL;
+	nng_msg *new = NULL;
+
+	char *extbuf = nng_alloc(7);
+	sprintf(extbuf, "extbuf");
+
+	NUTS_PASS(nng_extbuf_msg_alloc(&msg, 0, extbuf));
+	NUTS_ASSERT(strcmp("extbuf",
+	                (char *) nng_extbuf_msg_get_proto_data(msg)) == 0);
+	NUTS_PASS(nng_extbuf_msg_set_dup(msg, extbuf_dup));
+	NUTS_PASS(nng_extbuf_msg_set_free(msg, extbuf_free));
+
+	NUTS_PASS(nng_msg_dup(&new, msg));
+	NUTS_ASSERT(strcmp((char *) nng_extbuf_msg_get_proto_data(new),
+	                (char *) nng_extbuf_msg_get_proto_data(msg)) == 0);
+
+	nng_msg_free(new);
+	nng_msg_free(msg);
+}
+
 TEST_LIST = {
 	{ "msg option", test_msg_option },
 	{ "msg empty", test_msg_empty },
@@ -549,5 +590,6 @@ TEST_LIST = {
 	{ "msg header u32", test_msg_header_uint64 },
 	{ "msg capacity", test_msg_capacity },
 	{ "msg reserve", test_msg_reserve },
+	{ "msg extbuf", test_extbuf },
 	{ NULL, NULL },
 };

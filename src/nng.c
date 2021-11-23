@@ -1891,6 +1891,43 @@ nng_url_clone(nng_url **dstp, const nng_url *src)
 	return (nni_url_clone(dstp, src));
 }
 
+static nni_proto_msg_ops extbuf_msg_ops = {
+	.msg_free = NULL,
+	.msg_dup = NULL
+};
+
+int
+nng_extbuf_msg_alloc(nng_msg **msgp, size_t sz, void *extbuf)
+{
+	int rv;
+
+	if ((rv = nni_msg_alloc(msgp, sz)) != 0) {
+		return rv;
+	}
+
+	nni_msg_set_proto_data(*msgp, &extbuf_msg_ops, extbuf);
+
+	return (0);
+}
+
+int
+nng_extbuf_msg_set_dup(nng_msg *msg, int (*dup)(void **, void *))
+{
+	return nni_msg_proto_set_dup(msg, (const void *)dup);
+}
+
+int
+nng_extbuf_msg_set_free(nng_msg *msg, int (*free)(void *))
+{
+	return nni_msg_proto_set_free(msg, free);
+}
+
+void *
+nng_extbuf_msg_get_proto_data(nng_msg *msg)
+{
+	return nni_msg_get_proto_data(msg);
+}
+
 #define xstr(a) str(a)
 #define str(a) #a
 

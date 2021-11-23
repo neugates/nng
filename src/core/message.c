@@ -672,3 +672,24 @@ nni_msg_get_proto_data(nng_msg *m)
 {
 	return (m->m_proto_data);
 }
+
+int
+nni_msg_proto_set_dup(nni_msg *m, int (*dup)(void **, const void *))
+{
+	if (!m) {
+		return NNG_EEXIST;
+	}
+	m->m_proto_ops->msg_dup = dup;
+	return (0);
+}
+
+int
+nni_msg_proto_set_free(nni_msg *m, int (*free)(void *))
+{
+	if (!m) {
+		return NNG_EEXIST;
+	}
+	m->m_proto_ops->msg_free = free;
+	return (0);
+}
+
