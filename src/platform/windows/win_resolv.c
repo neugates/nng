@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Staysail Systems, Inc. <info@staysail.tech>
+// Copyright 2021 Staysail Systems, Inc. <info@staysail.tech>
 // Copyright 2018 Capitar IT Group BV <info@capitar.com>
 //
 // This software is supplied under the terms of the MIT License, a
@@ -26,9 +26,9 @@
 #define NNG_RESOLV_CONCURRENCY 4
 #endif
 
-static nni_mtx  resolv_mtx;
-static nni_cv   resolv_cv;
-static bool     resolv_fini;
+static nni_mtx  resolv_mtx = NNI_MTX_INITIALIZER;
+static nni_cv   resolv_cv = NNI_CV_INITIALIZER(&resolv_mtx);
+static bool     resolv_fini = false;
 static nni_list resolv_aios;
 static nni_thr  resolv_thrs[NNG_RESOLV_CONCURRENCY];
 
@@ -56,11 +56,11 @@ resolv_cancel(nni_aio *aio, void *arg, int rv)
 	resolv_item *item = arg;
 
 	nni_mtx_lock(&resolv_mtx);
-	if (item != nni_aio_get_prov_extra(aio, 0)) {
+	if (item != nni_aio_get_prov_data(aio)) {
 		nni_mtx_unlock(&resolv_mtx);
 		return;
 	}
-	nni_aio_set_prov_extra(aio, 0, NULL);
+	nni_aio_set_prov_data(aio, NULL);
 	if (nni_aio_list_active(aio)) {
 		// We have not been picked up by a resolver thread yet,
 		// so we can just discard everything.
@@ -248,7 +248,7 @@ nni_resolv_ip(const char *host, const char *serv, int family, bool passive,
 	if (resolv_fini) {
 		rv = NNG_ECLOSED;
 	} else {
-		nni_aio_set_prov_extra(aio, 0, item);
+		nni_aio_set_prov_data(aio, item);
 		rv = nni_aio_schedule(aio, resolv_cancel, item);
 	}
 	if (rv != 0) {
@@ -282,7 +282,7 @@ resolv_worker(void *notused)
 			continue;
 		}
 
-		item = nni_aio_get_prov_extra(aio, 0);
+		item = nni_aio_get_prov_data(aio);
 		nni_aio_list_remove(aio);
 
 		// Now attempt to do the work.  This runs synchronously.
@@ -292,7 +292,7 @@ resolv_worker(void *notused)
 
 		// Check to make sure we were not canceled.
 		if ((aio = item->aio) != NULL) {
-			nni_aio_set_prov_extra(aio, 0, NULL);
+			nni_aio_set_prov_data(aio, NULL);
 			item->aio = NULL;
 			item->sa  = NULL;
 
@@ -408,11 +408,9 @@ nni_parse_ip_port(const char *addr, nni_sockaddr *sa)
 int
 nni_win_resolv_sysinit(void)
 {
-	nni_mtx_init(&resolv_mtx);
-	nni_cv_init(&resolv_cv, &resolv_mtx);
 	nni_aio_list_init(&resolv_aios);
-
 	resolv_fini = false;
+
 	for (int i = 0; i < NNG_RESOLV_CONCURRENCY; i++) {
 		int rv = nni_thr_init(&resolv_thrs[i], resolv_worker, NULL);
 		if (rv != 0) {
@@ -437,8 +435,6 @@ nni_win_resolv_sysfini(void)
 	for (int i = 0; i < NNG_RESOLV_CONCURRENCY; i++) {
 		nni_thr_fini(&resolv_thrs[i]);
 	}
-	nni_cv_fini(&resolv_cv);
-	nni_mtx_fini(&resolv_mtx);
 }
 
 #endif // NNG_PLATFORM_WINDOWS

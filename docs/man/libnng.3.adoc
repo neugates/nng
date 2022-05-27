@@ -1,6 +1,6 @@
 = libnng(3)
 //
-// Copyright 2020 Staysail Systems, Inc. <info@staysail.tech>
+// Copyright 2021 Staysail Systems, Inc. <info@staysail.tech>
 // Copyright 2018 Capitar IT Group BV <info@capitar.com>
 // Copyright 2019 Devolutions <info@devolutions.net>
 // Copyright 2020 Dirac Research <robert.bielik@dirac.com>
@@ -164,6 +164,7 @@ The following functions are used in the asynchronous model:
 |xref:nng_aio_abort.3.adoc[nng_aio_abort()]|abort asynchronous I/O operation
 |xref:nng_aio_alloc.3.adoc[nng_aio_alloc()]|allocate asynchronous I/O handle
 |xref:nng_aio_begin.3.adoc[nng_aio_begin()]|begin asynchronous I/O operation
+|xref:nng_aio_busy.3.adoc[nng_aio_busy()]|test if asynchronous I/O is busy
 |xref:nng_aio_cancel.3.adoc[nng_aio_cancel()]|cancel asynchronous I/O operation
 |xref:nng_aio_count.3.adoc[nng_aio_count()]|return number of bytes transferred
 |xref:nng_aio_defer.3.adoc[nng_aio_defer()]|defer asynchronous I/O operation
@@ -231,7 +232,10 @@ concurrent applications.
 |xref:nng_ctx_id.3.adoc[nng_ctx_id()]|get numeric context identifier
 |xref:nng_ctx_open.3.adoc[nng_ctx_open()]|create context
 |xref:nng_ctx_recv.3.adoc[nng_ctx_recv()]|receive message using context asynchronously
+|xref:nng_ctx_recvmsg.3.adoc[nng_ctx_recvmsg()]|receive a message using context
 |xref:nng_ctx_send.3.adoc[nng_ctx_send()]|send message using context asynchronously
+|xref:nng_ctx_sendmsg.3.adoc[nng_ctx_sendmsg()]|send a message using context
+
 |xref:nng_ctx_set.3.adoc[nng_ctx_set()]|set context option
 |xref:nng_ctx_setopt.3.adoc[nng_ctx_setopt()]|set context option
 |===

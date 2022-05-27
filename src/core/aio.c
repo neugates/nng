@@ -1,5 +1,5 @@
 //
-// Copyright 2021 Staysail Systems, Inc. <info@staysail.tech>
+// Copyright 2022 Staysail Systems, Inc. <info@staysail.tech>
 // Copyright 2018 Capitar IT Group BV <info@capitar.com>
 //
 // This software is supplied under the terms of the MIT License, a
@@ -314,6 +314,12 @@ nni_aio_wait(nni_aio *aio)
 	nni_task_wait(&aio->a_task);
 }
 
+bool
+nni_aio_busy(nni_aio *aio)
+{
+	return (nni_task_busy(&aio->a_task));
+}
+
 int
 nni_aio_begin(nni_aio *aio)
 {
@@ -618,15 +624,15 @@ nni_aio_expire_loop(void *arg)
 }
 
 void *
-nni_aio_get_prov_extra(nni_aio *aio, unsigned index)
+nni_aio_get_prov_data(nni_aio *aio)
 {
-	return (aio->a_prov_extra[index]);
+	return (aio->a_prov_data);
 }
 
 void
-nni_aio_set_prov_extra(nni_aio *aio, unsigned index, void *data)
+nni_aio_set_prov_data(nni_aio *aio, void *data)
 {
-	aio->a_prov_extra[index] = data;
+	aio->a_prov_data = data;
 }
 
 void

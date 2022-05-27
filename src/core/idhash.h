@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Staysail Systems, Inc. <info@staysail.tech>
+// Copyright 2021 Staysail Systems, Inc. <info@staysail.tech>
 // Copyright 2018 Capitar IT Group BV <info@capitar.com>
 //
 // This software is supplied under the terms of the MIT License, a
@@ -23,28 +23,40 @@
 // use table sizes that are powers of two.  Note that hash items
 // must be non-NULL.  The table is protected by an internal lock.
 
-typedef struct nni_id_map       nni_id_map;
-typedef struct nni_id_entry     nni_id_entry;
+typedef struct nni_id_map   nni_id_map;
+typedef struct nni_id_entry nni_id_entry;
 
 // NB: These details are entirely private to the hash implementation.
 // They are provided here to facilitate inlining in structures.
 struct nni_id_map {
-	size_t        id_cap;
-	size_t        id_count;
-	size_t        id_load;
-	size_t        id_min_load; // considers placeholders
-	size_t        id_max_load;
+	uint32_t      id_cap;
+	uint32_t      id_count;
+	uint32_t      id_load;
+	uint32_t      id_min_load; // considers placeholders
+	uint32_t      id_max_load;
 	uint32_t      id_min_val;
 	uint32_t      id_max_val;
 	uint32_t      id_dyn_val;
+	uint32_t      id_flags;
 	nni_id_entry *id_entries;
 };
 
-extern void nni_id_map_init(nni_id_map *, uint32_t, uint32_t, bool);
-extern void nni_id_map_fini(nni_id_map *);
+#define NNI_ID_FLAG_STATIC 1   // allocated statically
+#define NNI_ID_FLAG_RANDOM 2   // start at a random value
+#define NNI_ID_FLAG_REGISTER 4 // map is registered for finalization
+
+extern void  nni_id_map_init(nni_id_map *, uint32_t, uint32_t, bool);
+extern void  nni_id_map_fini(nni_id_map *);
 extern void *nni_id_get(nni_id_map *, uint32_t);
-extern int nni_id_set(nni_id_map *, uint32_t, void *);
-extern int nni_id_alloc(nni_id_map *, uint32_t *, void *);
-extern int nni_id_remove(nni_id_map *, uint32_t);
+extern int   nni_id_set(nni_id_map *, uint32_t, void *);
+extern int   nni_id_alloc(nni_id_map *, uint32_t *, void *);
+extern int   nni_id_remove(nni_id_map *, uint32_t);
+extern void  nni_id_map_sys_fini(void);
+
+#define NNI_ID_MAP_INITIALIZER(min, max, flags)            \
+	{                                                  \
+		.id_min_val = (min), .id_max_val = (max),  \
+		.id_flags = ((flags) | NNI_ID_FLAG_STATIC) \
+	}
 
 #endif // CORE_IDHASH_H

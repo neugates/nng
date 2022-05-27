@@ -1,5 +1,5 @@
 //
-// Copyright 2021 Staysail Systems, Inc. <info@staysail.tech>
+// Copyright 2022 Staysail Systems, Inc. <info@staysail.tech>
 // Copyright 2018 Capitar IT Group BV <info@capitar.com>
 //
 // This software is supplied under the terms of the MIT License, a
@@ -93,6 +93,10 @@ extern int nni_aio_result(nni_aio *);
 // completed.
 extern size_t nni_aio_count(nni_aio *);
 
+// nni_aio_busy returns true if the aio is still busy processing work.
+// This is a non-blocking form of the check used by nni_aio_wait().
+extern bool nni_aio_busy(nni_aio *);
+
 // nni_aio_wait blocks the caller until the operation is complete.
 // The operation must have already been started.  This routine will
 // block until the AIO, as well as any callback, has completed execution.
@@ -133,8 +137,8 @@ extern void nni_aio_abort(nni_aio *, int rv);
 // nng_aio_finish family of functions.)
 extern int nni_aio_begin(nni_aio *);
 
-extern void *nni_aio_get_prov_extra(nni_aio *, unsigned);
-extern void  nni_aio_set_prov_extra(nni_aio *, unsigned, void *);
+extern void *nni_aio_get_prov_data(nni_aio *);
+extern void  nni_aio_set_prov_data(nni_aio *, void *);
 // nni_aio_advance_iov moves up the iov, reflecting that some I/O as
 // been performed.  It returns the amount of data remaining in the argument;
 // i.e. if the count refers to more data than the iov can support, then
@@ -200,9 +204,8 @@ struct nng_aio {
 	// Provider-use fields.
 	nni_aio_cancel_fn a_cancel_fn;
 	void	     *a_cancel_arg;
-	nni_list_node     a_prov_node;     // Linkage on provider list.
-	void	     *a_prov_extra[2]; // Extra data used by provider
-
+	void	     *a_prov_data;
+	nni_list_node     a_prov_node; // Linkage on provider list.
 	nni_aio_expire_q *a_expire_q;
 	nni_list_node     a_expire_node; // Expiration node
 	nni_reap_node     a_reap_node;

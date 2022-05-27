@@ -21,23 +21,8 @@ static void listener_accept_start(nni_listener *);
 static void listener_accept_cb(void *);
 static void listener_timer_cb(void *);
 
-static nni_id_map listeners;
-static nni_mtx    listeners_lk;
-
-void
-nni_listener_sys_init(void)
-{
-	nni_id_map_init(&listeners, 1, 0x7fffffff, false);
-	nni_mtx_init(&listeners_lk);
-}
-
-void
-nni_listener_sys_fini(void)
-{
-	nni_reap_drain();
-	nni_mtx_fini(&listeners_lk);
-	nni_id_map_fini(&listeners);
-}
+static nni_id_map listeners = NNI_ID_MAP_INITIALIZER(1, 0x7fffffff, 0);
+static nni_mtx    listeners_lk = NNI_MTX_INITIALIZER;
 
 uint32_t
 nni_listener_id(nni_listener *l)

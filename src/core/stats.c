@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Staysail Systems, Inc. <info@staysail.tech>
+// Copyright 2022 Staysail Systems, Inc. <info@staysail.tech>
 // Copyright 2018 Capitar IT Group BV <info@capitar.com>
 //
 // This software is supplied under the terms of the MIT License, a
@@ -19,21 +19,31 @@ struct nng_stat {
 	const nni_stat_info *s_info;
 	const nni_stat_item *s_item; // Used during snapshot collection
 	nni_list             s_children;
-	nni_stat *           s_parent;
+	nni_stat            *s_parent;
 	nni_list_node        s_node;
 	nni_time             s_timestamp;
 	union {
 		int      sv_id;
 		bool     sv_bool;
 		uint64_t sv_value;
-		char *   sv_string;
+		char    *sv_string;
 	} s_val;
 };
 
 #ifdef NNG_ENABLE_STATS
-static nni_stat_item stats_root;
-static nni_mtx       stats_lock;
-static nni_mtx       stats_val_lock;
+static nni_stat_info stats_root_info = {
+	.si_name = "",
+	.si_desc = "all statistics",
+	.si_type = NNG_STAT_SCOPE,
+};
+
+static nni_stat_item stats_root = {
+	.si_children = NNI_LIST_INITIALIZER(
+	    stats_root.si_children, nni_stat_item, si_node),
+	.si_info = &stats_root_info,
+};
+static nni_mtx stats_lock     = NNI_MTX_INITIALIZER;
+static nni_mtx stats_val_lock = NNI_MTX_INITIALIZER;
 #endif
 
 void
@@ -171,7 +181,7 @@ nni_stat_set_string(nni_stat_item *item, const char *s)
 {
 #ifdef NNG_ENABLE_STATS
 	const nni_stat_info *info = item->si_info;
-	char *               old  = item->si_u.sv_string;
+	char                *old  = item->si_u.sv_string;
 
 	nni_mtx_lock(&stats_val_lock);
 	if ((s != NULL) && (old != NULL) && (strcmp(s, old) == 0)) {
@@ -235,7 +245,7 @@ nng_stats_free(nni_stat *st)
 static int
 stat_make_tree(nni_stat_item *item, nni_stat **sp)
 {
-	nni_stat *     stat;
+	nni_stat      *stat;
 	nni_stat_item *child;
 
 	if ((stat = NNI_ALLOC_STRUCT(stat)) == NULL) {
@@ -266,8 +276,8 @@ stat_update(nni_stat *stat)
 {
 	const nni_stat_item *item = stat->s_item;
 	const nni_stat_info *info = item->si_info;
-	char *               old;
-	char *               str;
+	char                *old;
+	char                *str;
 
 	switch (info->si_type) {
 	case NNG_STAT_SCOPE:
@@ -397,7 +407,6 @@ nng_stat_bool(nni_stat *stat)
 	return (stat->s_val.sv_bool);
 }
 
-
 const char *
 nng_stat_string(nng_stat *stat)
 {
@@ -454,7 +463,7 @@ nng_stat *
 nng_stat_find_scope(nng_stat *stat, const char *name, int id)
 {
 	nng_stat *child;
-	if (stat == NULL) {
+	if (stat == NULL || stat->s_info->si_type != NNG_STAT_SCOPE) {
 		return (NULL);
 	}
 	if ((stat->s_val.sv_id == id) &&
@@ -464,7 +473,7 @@ nng_stat_find_scope(nng_stat *stat, const char *name, int id)
 	}
 	NNI_LIST_FOREACH (&stat->s_children, child) {
 		nng_stat *result;
-		if ((result = nng_stat_find(child, name)) != NULL) {
+		if ((result = nng_stat_find_scope(child, name, id)) != NULL) {
 			return (result);
 		}
 	}
@@ -487,31 +496,6 @@ nng_stat *
 nng_stat_find_listener(nng_stat *stat, nng_listener l)
 {
 	return (nng_stat_find_scope(stat, "listener", nng_listener_id(l)));
-}
-
-int
-nni_stat_sys_init(void)
-{
-#ifdef NNG_ENABLE_STATS
-	static const nni_stat_info root = {
-		.si_name = "",
-		.si_desc = "all statistics",
-		.si_type = NNG_STAT_SCOPE,
-	};
-	nni_mtx_init(&stats_lock);
-	nni_mtx_init(&stats_val_lock);
-	nni_stat_init(&stats_root, &root);
-#endif
-	return (0);
-}
-
-void
-nni_stat_sys_fini(void)
-{
-#ifdef NNG_ENABLE_STATS
-	nni_mtx_fini(&stats_lock);
-	nni_mtx_fini(&stats_val_lock);
-#endif
 }
 
 #ifdef NNG_ENABLE_STATS
@@ -538,10 +522,10 @@ nng_stats_dump(nng_stat *stat)
 #ifdef NNG_ENABLE_STATS
 	static char        buf[128]; // to minimize recursion, not thread safe
 	int                len;
-	char *             scope;
-	char *             indent = "        ";
+	char              *scope;
+	char              *indent = "        ";
 	unsigned long long val;
-	nni_stat *         child;
+	nni_stat          *child;
 
 	switch (nng_stat_type(stat)) {
 	case NNG_STAT_SCOPE:
