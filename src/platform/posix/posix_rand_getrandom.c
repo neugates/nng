@@ -21,9 +21,19 @@
 
 #ifdef NNG_HAVE_GETRANDOM
 
+#include <fcntl.h>
+#include <unistd.h>
+static int             urandom_fd   = -1;
+static pthread_mutex_t urandom_lock = PTHREAD_MUTEX_INITIALIZER;
+
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0u
+#endif
+
 uint32_t
 nni_random(void)
 {
+	int      fd;
 	uint32_t val;
 
 	// Documentation claims that as long as we are not using
@@ -32,7 +42,20 @@ nni_random(void)
 	// reason we got a signal while blocked at very early boot
 	// (i.e. /dev/urandom was not yet seeded).
 	if (getrandom(&val, sizeof(val), 0) != sizeof(val)) {
-		nni_panic("getrandom failed");
+		(void) pthread_mutex_lock(&urandom_lock);
+		if ((fd = urandom_fd) == -1) {
+			if ((fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC)) <
+			    0) {
+				(void) pthread_mutex_unlock(&urandom_lock);
+				nni_panic("failed to open /dev/urandom");
+			}
+			urandom_fd = fd;
+		}
+		(void) pthread_mutex_unlock(&urandom_lock);
+
+		if (read(fd, &val, sizeof(val)) != sizeof(val)) {
+			nni_panic("failed reading /dev/urandom");
+		}
 	}
 	return (val);
 }
