@@ -26,8 +26,10 @@ static pfnSetThreadDescription set_thread_desc;
 	__atomic_add_fetch(a, b, __ATOMIC_RELAXED)
 #define InterlockedIncrementAcquire64(a) \
 	__atomic_add_fetch(a, 1, __ATOMIC_ACQUIRE)
+#define InterlockedDecrementAcquire64(a) \
+	__atomic_sub_fetch(a, 1, __ATOMIC_ACQUIRE)
 #define InterlockedDecrementRelease64(a) \
-	__atomic_fetch_sub(a, 1, __ATOMIC_RELEASE)
+	__atomic_sub_fetch(a, 1, __ATOMIC_RELEASE)
 #endif
 
 #include <stdlib.h>
@@ -265,6 +267,16 @@ nni_atomic_dec64_nv(nni_atomic_u64 *v)
 #endif
 }
 
+void
+nni_atomic_dec64(nni_atomic_u64 *v)
+{
+#ifdef _WIN64
+	InterlockedDecrementAcquire64(&v->v);
+#else
+	InterlockedDecrement64(&v->v);
+#endif
+}
+
 bool
 nni_atomic_cas64(nni_atomic_u64 *v, uint64_t comp, uint64_t new)
 {
@@ -321,6 +333,12 @@ int
 nni_atomic_dec_nv(nni_atomic_int *v)
 {
 	return (InterlockedDecrementRelease(&v->v));
+}
+
+void
+nni_atomic_dec(nni_atomic_int *v)
+{
+	(void) InterlockedDecrementAcquire(&v->v);
 }
 
 bool
